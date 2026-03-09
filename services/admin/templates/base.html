@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Admin{% endblock %}</title>
+    <link rel="stylesheet" href="/static/admin.css">
+  </head>
+  <body>
+    <header>
+      <h1>xmr-webshop admin</h1>
+      {% if admin_username %}
+        <nav>
+          <a href="/">Dashboard</a>
+          <a href="/products">Products</a>
+          <a href="/orders">Orders</a>
+          <a href="/wallet">Wallet</a>
+          <a href="/analytics">Analytics</a>
+          <form method="post" action="/logout" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit">Logout ({{ admin_username }})</button>
+          </form>
+        </nav>
+      {% endif %}
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Storefront{% endblock %}
+{% block content %}
+<h1>Digital Goods</h1>
+
+{% if products %}
+  <section class="grid">
+    {% for product in products %}
+      {% include "partials/product_card.html" %}
+    {% endfor %}
+  </section>
+{% else %}
+  <p>No products published yet.</p>
+{% endif %}
+{% endblock %}

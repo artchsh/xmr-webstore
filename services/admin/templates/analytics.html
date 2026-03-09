@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<h2>Privacy-Preserving Analytics</h2>
+
+<h3>Totals by event type</h3>
+{% if totals %}
+  <table>
+    <thead>
+      <tr>
+        <th>Event type</th>
+        <th>Total count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in totals %}
+        <tr>
+          <td>{{ row.event_type }}</td>
+          <td>{{ row.total_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No analytics events yet.</p>
+{% endif %}
+
+<h3>Daily counts (last 30 days)</h3>
+{% if daily %}
+  <table>
+    <thead>
+      <tr>
+        <th>Day</th>
+        <th>Event type</th>
+        <th>Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in daily %}
+        <tr>
+          <td>{{ row.day }}</td>
+          <td>{{ row.event_type }}</td>
+          <td>{{ row.total_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No daily analytics data yet.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.public_token }}{% endblock %}
+{% block content %}
+<h1>Order Receipt</h1>
+
+<p><strong>Order token:</strong> <code>{{ order.public_token }}</code></p>
+<p><strong>Status:</strong> {{ order.status }}</p>
+<p><strong>Total:</strong> {{ format_xmr(order.total_atomic) }} XMR</p>
+<p><strong>Created:</strong> {{ order.created_at }}</p>
+<p><a href="/order/{{ order.public_token }}/receipt.txt">Download receipt (text)</a></p>
+
+{% if order.status in ["pending_payment", "waiting_confirmations"] %}
+  <section class="payment-box">
+    <h2>Monero Payment Instructions</h2>
+    <p>Send exactly <strong>{{ format_xmr(order.total_atomic) }} XMR</strong> to:</p>
+    <pre>{{ order.payment_subaddress }}</pre>
+    <p>Received: {{ format_xmr(order.received_atomic) }} XMR</p>
+    <p>Confirmations: {{ order.payment_confirmations }} / {{ required_confirmations }}</p>
+    <p>Expires: {{ order.expires_at }}</p>
+    <p>Refresh this page after payment broadcasts or confirmation updates.</p>
+  </section>
+{% elif order.status == "completed" %}
+  <section>
+    <h2>Payment confirmed</h2>
+    <p>Your digital goods are available below.</p>
+  </section>
+{% elif order.status == "expired" %}
+  <p>This order expired before full payment was received.</p>
+{% elif order.status == "cancelled" %}
+  <p>This order was cancelled by the seller.</p>
+{% endif %}
+
+<h2>Items</h2>
+<ul>
+  {% for item in items %}
+    <li>
+      {{ item.product_title }} x {{ item.quantity }}
+      {% if order.status == "completed" %}
+        {% set link = download_links.get(item.id) %}
+        {% if link %}
+          - <a href="/order/{{ order.public_token }}/download/{{ item.id }}?exp={{ link.expires }}&sig={{ link.signature }}">Download</a>
+        {% endif %}
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

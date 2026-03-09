@@ -1,0 +1,107 @@
+:root {
+  --bg: #f3f1ec;
+  --text: #201f1b;
+  --muted: #646059;
+  --line: #d3cec4;
+  --accent: #183a53;
+  --panel: #fffefb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Iosevka Aile", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top left, #fffefb 0%, var(--bg) 60%);
+}
+
+header,
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+nav {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+a {
+  color: var(--accent);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 0.45rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+form {
+  margin: 0.6rem 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  width: 100%;
+  max-width: 480px;
+  padding: 0.45rem;
+}
+
+textarea {
+  min-height: 120px;
+}
+
+button,
+.button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  max-width: max-content;
+  padding: 0.55rem 0.85rem;
+  text-decoration: none;
+}
+
+.inline-form {
+  display: inline-block;
+  margin: 0;
+}
+
+.inline-form button {
+  width: auto;
+}
+
+.error {
+  color: #8a1d1d;
+  font-weight: 600;
+}
+
+pre,
+code {
+  background: #ece8df;
+  padding: 0.2rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

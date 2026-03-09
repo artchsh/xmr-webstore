@@ -1,0 +1,95 @@
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      SHOP_DOMAIN: ${SHOP_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - webshop
+    networks:
+      - public_net
+
+  webshop:
+    build:
+      context: .
+      dockerfile: services/webshop/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_PATH: /data/webshop.db
+      DIGITAL_GOODS_DIR: /data/digital_goods
+      WALLET_RPC_URL: http://wallet-rpc:18083/json_rpc
+    volumes:
+      - app_data:/data
+    depends_on:
+      - wallet-rpc
+    networks:
+      - public_net
+      - private_net
+
+  admin:
+    build:
+      context: .
+      dockerfile: services/admin/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_PATH: /data/webshop.db
+      DIGITAL_GOODS_DIR: /data/digital_goods
+      WALLET_RPC_URL: http://wallet-rpc:18083/json_rpc
+    volumes:
+      - app_data:/data
+    depends_on:
+      - wallet-rpc
+    networks:
+      - private_net
+    ports:
+      - "127.0.0.1:${ADMIN_LOCAL_PORT:-8081}:8001"
+
+  wallet-rpc:
+    build:
+      context: .
+      dockerfile: services/wallet-rpc/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      WALLET_DIR: /wallet
+      WALLET_RPC_BIND_IP: 0.0.0.0
+      WALLET_RPC_PORT: 18083
+      TOR_SOCKS_HOST: tor
+      TOR_SOCKS_PORT: 9050
+    depends_on:
+      - tor
+    volumes:
+      - wallet_data:/wallet
+    networks:
+      - private_net
+
+  tor:
+    build:
+      context: .
+      dockerfile: services/tor/Dockerfile
+    restart: unless-stopped
+    networks:
+      - private_net
+
+volumes:
+  app_data:
+  wallet_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  public_net:
+  private_net:

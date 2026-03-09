@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+<h1>Checkout</h1>
+
+<p>No account or email is required. Payment is Monero only.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Product</th>
+      <th>Qty</th>
+      <th>Unit</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+      <tr>
+        <td>{{ item.title }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ format_xmr(item.unit_price_atomic) }} XMR</td>
+        <td>{{ format_xmr(item.line_total_atomic) }} XMR</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><strong>Total to pay: {{ format_xmr(total_atomic) }} XMR</strong></p>
+
+<form method="post" action="/checkout">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">Create order and payment request</button>
+</form>
+{% endblock %}

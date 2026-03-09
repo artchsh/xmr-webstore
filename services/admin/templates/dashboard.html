@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>Dashboard</h2>
+<ul>
+  <li>Products: {{ counts.products }}</li>
+  <li>Total orders: {{ counts.orders }}</li>
+  <li>Pending payment: {{ counts.pending_payment }}</li>
+  <li>Waiting confirmations: {{ counts.waiting_confirmations }}</li>
+  <li>Completed orders: {{ counts.completed }}</li>
+  <li>Expired orders: {{ counts.expired }}</li>
+</ul>
+{% endblock %}

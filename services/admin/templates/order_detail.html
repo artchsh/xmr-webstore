@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.id }}{% endblock %}
+{% block content %}
+<h2>Order #{{ order.id }}</h2>
+
+<ul>
+  <li>Public token: <code>{{ order.public_token }}</code></li>
+  <li>Status: {{ order.status }}</li>
+  <li>Total: {{ format_xmr(order.total_atomic) }} XMR</li>
+  <li>Paid: {{ format_xmr(order.paid_atomic) }} XMR</li>
+  <li>Confirmations: {{ order.confirmation_count }}</li>
+  <li>Created: {{ order.created_at }}</li>
+  <li>Expires: {{ order.expires_at }}</li>
+  <li>Paid at: {{ order.paid_at or '-' }}</li>
+  <li>Payment address: <code>{{ order.payment_subaddress }}</code></li>
+  <li>Payment requested: {{ format_xmr(order.requested_atomic or 0) }} XMR</li>
+  <li>Payment received: {{ format_xmr(order.received_atomic or 0) }} XMR</li>
+  <li>Payment state: {{ order.payment_status }}</li>
+  <li>TxID: <code>{{ order.payment_txid or '-' }}</code></li>
+</ul>
+
+{% if order.status in ['pending_payment', 'waiting_confirmations'] %}
+  <form method="post" action="/orders/{{ order.id }}/cancel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Cancel Order</button>
+  </form>
+{% endif %}
+
+<h3>Order items</h3>
+<ul>
+  {% for item in items %}
+    <li>{{ item.product_title }} x {{ item.quantity }} ({{ format_xmr(item.unit_price_atomic) }} XMR each) - <code>{{ item.delivery_ref }}</code></li>
+  {% endfor %}
+</ul>
+
+<h3>Delivery events</h3>
+{% if events %}
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Event</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in events %}
+        <tr>
+          <td>{{ e.created_at }}</td>
+          <td>{{ e.event_type }}</td>
+          <td>{{ e.detail }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No events yet.</p>
+{% endif %}
+{% endblock %}

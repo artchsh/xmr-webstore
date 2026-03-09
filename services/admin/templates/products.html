@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<h2>Products</h2>
+<p><a class="button" href="/products/new">Create product</a></p>
+
+{% if products %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Slug</th>
+        <th>Title</th>
+        <th>Price</th>
+        <th>File</th>
+        <th>State</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.slug }}</td>
+          <td>{{ p.title }}</td>
+          <td>{{ format_xmr(p.price_atomic) }} XMR</td>
+          <td><code>{{ p.file_path }}</code></td>
+          <td>
+            {% if p.is_archived %}
+              archived
+            {% elif p.is_active %}
+              active
+            {% else %}
+              inactive
+            {% endif %}
+          </td>
+          <td>
+            <a href="/products/{{ p.id }}/edit">Edit</a>
+            <form class="inline-form" method="post" action="/products/{{ p.id }}/archive">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">Archive</button>
+            </form>
+            <form class="inline-form" method="post" action="/products/{{ p.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No products yet.</p>
+{% endif %}
+{% endblock %}

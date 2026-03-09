@@ -1,0 +1,98 @@
+:root {
+  --bg: #f4f4ef;
+  --ink: #1d1f16;
+  --muted: #6b6e5f;
+  --line: #d5d6cb;
+  --accent: #23443a;
+  --panel: #fffffc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #f9f8f2 0%, var(--bg) 100%);
+  color: var(--ink);
+}
+
+header,
+main,
+footer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card,
+.payment-box {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+input,
+button,
+textarea {
+  font: inherit;
+  padding: 0.4rem;
+}
+
+button,
+.button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  text-decoration: none;
+  display: inline-block;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+}
+
+.inline-form {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: #eceee5;
+  padding: 0.7rem;
+}
+
+footer {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

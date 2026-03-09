@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Wallet{% endblock %}
+{% block content %}
+<h2>Wallet Status</h2>
+
+{% if error %}
+  <p class="error">{{ error }}</p>
+{% else %}
+  <ul>
+    <li>Total balance: {{ format_xmr(balance.balance or 0) }} XMR</li>
+    <li>Unlocked balance: {{ format_xmr(balance.unlocked_balance or 0) }} XMR</li>
+  </ul>
+
+  {% if addresses and addresses.address %}
+    <p>Primary address:</p>
+    <pre>{{ addresses.address }}</pre>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }}{% endblock %}
+{% block content %}
+<article>
+  <h1>{{ product.title }}</h1>
+  <p><strong>{{ format_xmr(product.price_atomic) }} XMR</strong></p>
+  <p>{{ product.short_description }}</p>
+  <div class="long-text">{{ product.long_description }}</div>
+
+  <form method="post" action="/cart/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="product_id" value="{{ product.id }}">
+    <label>
+      Quantity
+      <input type="number" name="quantity" min="1" value="1">
+    </label>
+    <button type="submit">Add to cart</button>
+  </form>
+</article>
+{% endblock %}

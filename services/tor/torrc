@@ -1,0 +1,6 @@
+SocksPort 0.0.0.0:9050
+Log notice stdout
+DataDirectory /var/lib/tor
+AutomapHostsOnResolve 1
+SafeSocks 1
+TestSocks 1

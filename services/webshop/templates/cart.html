@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Cart{% endblock %}
+{% block content %}
+<h1>Your Cart</h1>
+
+{% if items %}
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Unit price</th>
+        <th>Quantity</th>
+        <th>Line total</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.title }}</td>
+          <td>{{ format_xmr(item.unit_price_atomic) }} XMR</td>
+          <td>
+            <form method="post" action="/cart/update" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="product_id" value="{{ item.product_id }}">
+              <input type="number" name="quantity" min="0" value="{{ item.quantity }}">
+              <button type="submit">Update</button>
+            </form>
+          </td>
+          <td>{{ format_xmr(item.line_total_atomic) }} XMR</td>
+          <td>
+            <form method="post" action="/cart/update" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="product_id" value="{{ item.product_id }}">
+              <input type="hidden" name="quantity" value="0">
+              <button type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p><strong>Total: {{ format_xmr(total_atomic) }} XMR</strong></p>
+  <p><a class="button" href="/checkout">Continue to checkout</a></p>
+
+  <form method="post" action="/cart/clear">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Clear cart</button>
+  </form>
+{% else %}
+  <p>Your cart is empty.</p>
+{% endif %}
+{% endblock %}

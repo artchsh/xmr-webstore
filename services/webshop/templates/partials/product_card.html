@@ -1,0 +1,11 @@
+<article class="card">
+  <h2><a href="/product/{{ product.slug }}">{{ product.title }}</a></h2>
+  <p>{{ product.short_description }}</p>
+  <p><strong>{{ format_xmr(product.price_atomic) }} XMR</strong></p>
+  <form method="post" action="/cart/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="product_id" value="{{ product.id }}">
+    <input type="hidden" name="quantity" value="1">
+    <button type="submit">Add to cart</button>
+  </form>
+</article>

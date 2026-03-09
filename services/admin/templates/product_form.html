@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{% if product %}Edit Product{% else %}Create Product{% endif %}{% endblock %}
+{% block content %}
+<h2>{% if product %}Edit Product #{{ product.id }}{% else %}Create Product{% endif %}</h2>
+
+{% if error %}
+  <p class="error">{{ error }}</p>
+{% endif %}
+
+<form method="post" action="{{ form_action }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>
+    Title
+    <input type="text" name="title" required value="{{ product.title if product else '' }}">
+  </label>
+
+  <label>
+    Slug
+    <input type="text" name="slug" value="{{ product.slug if product else '' }}">
+  </label>
+
+  <label>
+    Short description
+    <textarea name="short_description" required>{{ product.short_description if product else '' }}</textarea>
+  </label>
+
+  <label>
+    Long description
+    <textarea name="long_description" required>{{ product.long_description if product else '' }}</textarea>
+  </label>
+
+  <label>
+    Price (XMR)
+    <input type="text" name="price_xmr" required value="{{ format_xmr(product.price_atomic) if product else '' }}">
+  </label>
+
+  <label>
+    Delivery type
+    <select name="delivery_type">
+      <option value="file" {% if product and product.delivery_type == 'file' %}selected{% endif %}>file</option>
+    </select>
+  </label>
+
+  <label>
+    Existing file path (relative to digital goods dir)
+    <input type="text" name="existing_file_path" value="{{ product.file_path if product else '' }}">
+  </label>
+
+  <label>
+    Upload file (optional)
+    <input type="file" name="upload_file">
+  </label>
+
+  <label>
+    <input type="checkbox" name="is_active" value="1" {% if not product or product.is_active %}checked{% endif %}>
+    Active
+  </label>
+
+  {% if product %}
+    <label>
+      <input type="checkbox" name="is_archived" value="1" {% if product.is_archived %}checked{% endif %}>
+      Archived
+    </label>
+  {% endif %}
+
+  <button type="submit">Save</button>
+</form>
+{% endblock %}
