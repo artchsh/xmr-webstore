@@ -239,6 +239,29 @@ def test_order_cancel_action(
     assert status == "cancelled"
 
 
+def test_order_cancel_noop_does_not_insert_event_for_completed_order(
+    admin_client_logged_in,
+    sqlite_conn: sqlite3.Connection,
+    create_order,
+) -> None:
+    order = create_order(status="completed")
+    detail = admin_client_logged_in.get(f"/orders/{order['order_id']}")
+    csrf = extract_csrf_token(detail.text)
+
+    response = admin_client_logged_in.post(
+        f"/orders/{order['order_id']}/cancel",
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    cancelled_events = sqlite_conn.execute(
+        "SELECT COUNT(*) FROM delivery_events WHERE order_id = ? AND event_type = 'order_cancelled'",
+        (order["order_id"],),
+    ).fetchone()[0]
+    assert cancelled_events == 0
+
+
 def test_wallet_view_uses_mocked_wallet_data(
     admin_client_logged_in, admin_wallet
 ) -> None:

@@ -78,9 +78,11 @@ def validate_relative_file(base_dir: str, relative_path: str) -> str:
     base = Path(base_dir).resolve()
     candidate = (base / relative_path).resolve()
 
-    if not str(candidate).startswith(str(base)):
+    try:
+        relative = candidate.relative_to(base)
+    except ValueError as exc:
         raise ValueError("File path escapes digital goods directory")
     if not candidate.is_file():
         raise ValueError("File does not exist")
 
-    return str(candidate.relative_to(base))
+    return str(relative)

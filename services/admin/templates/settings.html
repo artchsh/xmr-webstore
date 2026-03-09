@@ -25,6 +25,10 @@
     <input type="text" name="shop_logo_url" value="{{ branding.logo_url }}" placeholder="https://example.com/logo.png">
   </label>
 
+  {% if not allow_external_asset_urls %}
+    <p class="error">External logo URLs are disabled by default for privacy. Use uploads or set <code>ALLOW_EXTERNAL_ASSET_URLS=true</code>.</p>
+  {% endif %}
+
   <label>
     Upload logo PNG/JPG
     <input type="file" name="upload_logo" accept="image/*">

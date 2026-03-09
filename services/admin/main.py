@@ -49,6 +49,8 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["format_xmr"] = atomic_to_xmr
 
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"}
+
 
 def media_type_for_suffix(path: str) -> str:
     suffix = Path(path).suffix.lower()
@@ -61,6 +63,22 @@ def media_type_for_suffix(path: str) -> str:
         ".svg": "image/svg+xml",
         ".ico": "image/x-icon",
     }.get(suffix, "application/octet-stream")
+
+
+async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
+    data = await upload.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise ValueError(f"Upload exceeds max size of {max_bytes} bytes")
+    return data
+
+
+def validate_image_upload(upload: UploadFile) -> None:
+    suffix = Path(upload.filename or "").suffix.lower()
+    if suffix not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError("Unsupported image type")
+    content_type = (upload.content_type or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        raise ValueError("Uploaded file is not an image")
 
 
 def db_conn() -> sqlite3.Connection:
@@ -104,6 +122,7 @@ def template_context(request: Request, **extra: object) -> dict[str, object]:
         "shop_name": branding.name,
         "shop_owner": branding.owner,
         "shop_logo_src": shop_logo_src(branding),
+        "allow_external_asset_urls": settings.allow_external_asset_urls,
     }
     context.update(extra)
     return context
@@ -281,17 +300,22 @@ async def resolve_brand_logo(
     current_logo_path: str,
 ) -> tuple[str, str]:
     if upload_logo and upload_logo.filename:
+        validate_image_upload(upload_logo)
         safe_name = sanitize_filename(upload_logo.filename)
         final_name = f"{random_token(6)}-{safe_name}"
         target = Path(settings.branding_assets_dir) / final_name
-        content = await upload_logo.read()
+        content = await read_upload_limited(upload_logo, settings.max_upload_bytes)
         target.write_bytes(content)
         return "", final_name
 
     clean_url = logo_url.strip()
     if clean_url:
-        if not (clean_url.startswith("http://") or clean_url.startswith("https://")):
-            raise ValueError("Logo URL must start with http:// or https://")
+        if not settings.allow_external_asset_urls:
+            raise ValueError(
+                "External logo URLs are disabled. Upload logo files or enable ALLOW_EXTERNAL_ASSET_URLS=true"
+            )
+        if not clean_url.startswith("https://"):
+            raise ValueError("Logo URL must start with https://")
         return clean_url, ""
 
     if current_logo_url or current_logo_path:
@@ -431,7 +455,7 @@ async def resolve_product_file(
         safe_name = sanitize_filename(upload.filename)
         final_name = f"{random_token(6)}-{safe_name}"
         target = Path(settings.digital_goods_dir) / final_name
-        content = await upload.read()
+        content = await read_upload_limited(upload, settings.max_upload_bytes)
         target.write_bytes(content)
         return final_name
 
@@ -451,17 +475,22 @@ async def resolve_product_image(
     current_image_path: str = "",
 ) -> tuple[str, str]:
     if upload_image and upload_image.filename:
+        validate_image_upload(upload_image)
         safe_name = sanitize_filename(upload_image.filename)
         final_name = f"{random_token(6)}-{safe_name}"
         target = Path(settings.product_images_dir) / final_name
-        content = await upload_image.read()
+        content = await read_upload_limited(upload_image, settings.max_upload_bytes)
         target.write_bytes(content)
         return "", final_name
 
     clean_url = image_url.strip()
     if clean_url:
-        if not (clean_url.startswith("http://") or clean_url.startswith("https://")):
-            raise ValueError("Image URL must start with http:// or https://")
+        if not settings.allow_external_asset_urls:
+            raise ValueError(
+                "External image URLs are disabled. Upload image files or enable ALLOW_EXTERNAL_ASSET_URLS=true"
+            )
+        if not clean_url.startswith("https://"):
+            raise ValueError("Image URL must start with https://")
         return clean_url, ""
 
     if current_image_url or current_image_path:
@@ -886,7 +915,7 @@ async def order_cancel(request: Request, order_id: int, csrf_token: str = Form(.
     conn = db_conn()
     try:
         with conn:
-            conn.execute(
+            cursor = conn.execute(
                 """
                 UPDATE orders
                 SET status = 'cancelled', cancelled_at = ?, updated_at = ?
@@ -894,13 +923,14 @@ async def order_cancel(request: Request, order_id: int, csrf_token: str = Form(.
                 """,
                 (utcnow_iso(), utcnow_iso(), order_id),
             )
-            conn.execute(
-                """
-                INSERT INTO delivery_events (order_id, event_type, detail, created_at)
-                VALUES (?, ?, ?, ?)
-                """,
-                (order_id, "order_cancelled", "Cancelled by admin", utcnow_iso()),
-            )
+            if cursor.rowcount == 1:
+                conn.execute(
+                    """
+                    INSERT INTO delivery_events (order_id, event_type, detail, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (order_id, "order_cancelled", "Cancelled by admin", utcnow_iso()),
+                )
     finally:
         conn.close()
 

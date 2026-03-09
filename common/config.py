@@ -34,6 +34,8 @@ class AppSettings:
     shop_name: str
     shop_owner: str
     shop_logo_url: str
+    allow_external_asset_urls: bool
+    max_upload_bytes: int
     session_secret: str
     download_token_secret: str
     order_expiry_minutes: int
@@ -61,6 +63,8 @@ class AdminSettings:
     shop_name: str
     shop_owner: str
     shop_logo_url: str
+    allow_external_asset_urls: bool
+    max_upload_bytes: int
     session_secret: str
     wallet_rpc_url: str
     wallet_rpc_username: str
@@ -92,6 +96,10 @@ def load_webshop_settings() -> AppSettings:
         shop_name=os.getenv("SHOP_NAME", "xmr-webshop"),
         shop_owner=os.getenv("SHOP_OWNER", ""),
         shop_logo_url=os.getenv("SHOP_LOGO_URL", ""),
+        allow_external_asset_urls=_to_bool(
+            os.getenv("ALLOW_EXTERNAL_ASSET_URLS"), default=False
+        ),
+        max_upload_bytes=_to_int(os.getenv("MAX_UPLOAD_BYTES"), 10485760),
         session_secret=os.getenv("WEB_SESSION_SECRET", "change-me-web-session-secret"),
         download_token_secret=os.getenv(
             "DOWNLOAD_TOKEN_SECRET", "change-me-download-secret"
@@ -131,6 +139,10 @@ def load_admin_settings() -> AdminSettings:
         shop_name=os.getenv("SHOP_NAME", "xmr-webshop"),
         shop_owner=os.getenv("SHOP_OWNER", ""),
         shop_logo_url=os.getenv("SHOP_LOGO_URL", ""),
+        allow_external_asset_urls=_to_bool(
+            os.getenv("ALLOW_EXTERNAL_ASSET_URLS"), default=False
+        ),
+        max_upload_bytes=_to_int(os.getenv("MAX_UPLOAD_BYTES"), 10485760),
         session_secret=os.getenv(
             "ADMIN_SESSION_SECRET", "change-me-admin-session-secret"
         ),

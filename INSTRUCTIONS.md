@@ -48,6 +48,7 @@ cp .env.example .env
   - `SHOP_NAME`
   - `SHOP_OWNER`
   - `SHOP_LOGO_URL`
+  - `ALLOW_EXTERNAL_ASSET_URLS=false` (recommended for privacy)
 
 3. Start production stack:
 
@@ -153,3 +154,4 @@ docker compose up -d --build
 - Uploaded logo is served from `/media/branding/<filename>`.
 - Current MVP uses the uploaded/logo URL directly as favicon.
 - Automatic multi-size icon generation (`.ico`, PWA icon set, manifest) is intentionally not included yet.
+- For privacy-first deployments, keep `ALLOW_EXTERNAL_ASSET_URLS=false` so browsers do not fetch third-party assets.

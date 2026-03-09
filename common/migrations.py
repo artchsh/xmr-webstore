@@ -130,5 +130,15 @@ def run_migrations(conn: sqlite3.Connection) -> None:
         MIGRATIONS[current_version:], start=current_version + 1
     ):
         with conn:
-            conn.executescript(statement)
+            if "ALTER TABLE products ADD COLUMN image_url" in statement:
+                columns = {
+                    str(row["name"])
+                    for row in conn.execute("PRAGMA table_info(products)").fetchall()
+                }
+                if "image_url" not in columns:
+                    conn.execute("ALTER TABLE products ADD COLUMN image_url TEXT")
+                if "image_path" not in columns:
+                    conn.execute("ALTER TABLE products ADD COLUMN image_path TEXT")
+            else:
+                conn.executescript(statement)
             conn.execute(f"PRAGMA user_version = {idx}")

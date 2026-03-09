@@ -5,6 +5,9 @@
 - `SHOP_NAME`: storefront/admin display name
 - `SHOP_OWNER`: optional owner label
 - `SHOP_LOGO_URL`: optional logo URL
+- `ALLOW_EXTERNAL_ASSET_URLS`: `false` by default (privacy-safe)
+
+If `ALLOW_EXTERNAL_ASSET_URLS=false`, logo/image URLs are rejected and only uploaded local files are used.
 
 You can also manage branding in Admin -> Settings.
 
@@ -20,6 +23,7 @@ You can also manage branding in Admin -> Settings.
 - `DIGITAL_GOODS_DIR`: product file storage
 - `PRODUCT_IMAGES_DIR`: product image storage
 - `BRANDING_ASSETS_DIR`: uploaded logo storage
+- `MAX_UPLOAD_BYTES`: max upload size for digital files/images/logos (default `10485760`)
 
 ## Monero wallet settings
 

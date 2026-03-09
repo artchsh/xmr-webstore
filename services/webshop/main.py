@@ -54,7 +54,7 @@ templates.env.globals["format_xmr"] = atomic_to_xmr
 
 
 def product_image_src(image_url: str | None, image_path: str | None) -> str:
-    if image_url:
+    if image_url and settings.allow_external_asset_urls:
         return image_url
     if image_path:
         return f"/media/product/{quote(image_path)}"
@@ -65,7 +65,7 @@ templates.env.globals["product_image_src"] = product_image_src
 
 
 def shop_logo_src(branding: ShopBranding) -> str:
-    if branding.logo_url:
+    if branding.logo_url and settings.allow_external_asset_urls:
         return branding.logo_url
     if branding.logo_path:
         return f"/media/branding/{quote(branding.logo_path)}"

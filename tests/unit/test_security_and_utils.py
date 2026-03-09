@@ -81,6 +81,17 @@ def test_validate_relative_file_blocks_path_escape(tmp_path: Path) -> None:
         validate_relative_file(str(base_dir), "../outside.txt")
 
 
+def test_validate_relative_file_blocks_prefix_collision_escape(tmp_path: Path) -> None:
+    base_dir = tmp_path / "product_images"
+    sibling = tmp_path / "product_images_backup"
+    base_dir.mkdir()
+    sibling.mkdir()
+    (sibling / "secret.png").write_text("secret")
+
+    with pytest.raises(ValueError):
+        validate_relative_file(str(base_dir), "../product_images_backup/secret.png")
+
+
 def test_get_cart_sanitizes_malformed_session() -> None:
     class DummyRequest:
         def __init__(self, session: dict) -> None:

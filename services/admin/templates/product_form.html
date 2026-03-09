@@ -56,6 +56,10 @@
     <input type="text" name="image_url" value="{{ product.image_url if product else '' }}">
   </label>
 
+  {% if not allow_external_asset_urls %}
+    <p class="error">External image URLs are disabled by default for privacy. Use uploads or set <code>ALLOW_EXTERNAL_ASSET_URLS=true</code>.</p>
+  {% endif %}
+
   <label>
     Upload image (optional)
     <input type="file" name="upload_image" accept="image/*">

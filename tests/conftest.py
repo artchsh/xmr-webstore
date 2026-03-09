@@ -47,6 +47,8 @@ def app_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "BRANDING_ASSETS_DIR": str(branding_dir),
         "COOKIE_SECURE": "false",
         "PUBLIC_BASE_URL": "http://testserver",
+        "ALLOW_EXTERNAL_ASSET_URLS": "true",
+        "MAX_UPLOAD_BYTES": "1048576",
         "WEB_SESSION_SECRET": "test-web-session-secret",
         "ADMIN_SESSION_SECRET": "test-admin-session-secret",
         "DOWNLOAD_TOKEN_SECRET": "test-download-secret",
