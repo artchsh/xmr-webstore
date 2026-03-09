@@ -11,10 +11,13 @@ Privacy-first, self-hostable Monero digital goods webshop for a single seller.
 
 This repository intentionally keeps setup and maintenance simple for a solo operator.
 
+Full environment setup and switching guidance is in `INSTRUCTIONS.md`.
+
 ## What is included
 
 - public storefront service (`webshop`) with:
   - product catalog
+  - product images (uploaded or URL-based)
   - cookie-session cart
   - Monero checkout + payment instructions
   - order receipt by public order token
@@ -22,6 +25,7 @@ This repository intentionally keeps setup and maintenance simple for a solo oper
 - separate admin service (`admin`) with:
   - login
   - product CRUD (create/edit/archive/delete)
+  - product image upload or image URL input
   - file upload or file path registration for digital goods
   - order list/detail and manual cancel
   - wallet balance/address view
@@ -168,3 +172,37 @@ Stop services:
 ```bash
 docker compose down
 ```
+
+## Testing
+
+Install test dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Run full suite:
+
+```bash
+pytest
+```
+
+Run focused categories:
+
+```bash
+pytest -m unit
+pytest -m db
+pytest -m webshop
+pytest -m admin
+pytest -m service
+pytest -m security
+pytest -m integration
+```
+
+Optional deployment smoke tests (disabled by default):
+
+```bash
+SHOP_SMOKE_URL=https://shop.example.com ADMIN_SMOKE_URL=http://127.0.0.1:8081 pytest -m optional_integration
+```
+
+See `docs/testing.md` for the full testing architecture and implementation details.

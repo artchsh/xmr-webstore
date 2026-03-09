@@ -48,6 +48,12 @@ a {
   padding: 1rem;
 }
 
+.product-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

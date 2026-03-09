@@ -30,7 +30,10 @@ def parse_xmr_to_atomic(raw: str) -> int:
     raw = raw.strip()
     if not raw:
         raise ValueError("Price is required")
-    amount = decimal.Decimal(raw)
+    try:
+        amount = decimal.Decimal(raw)
+    except decimal.InvalidOperation as exc:
+        raise ValueError("Invalid price format") from exc
     if amount <= 0:
         raise ValueError("Price must be positive")
     amount_atomic = amount * ATOMIC_UNITS

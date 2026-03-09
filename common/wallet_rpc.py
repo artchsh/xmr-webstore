@@ -27,6 +27,7 @@ class MoneroWalletRPC:
         wallet_file: str,
         wallet_password: str,
         wallet_auto_create: bool,
+        daemon_nodes: list[str] | None = None,
         wallet_create_language: str = "English",
         timeout_seconds: int = 20,
     ) -> None:
@@ -35,6 +36,10 @@ class MoneroWalletRPC:
         self.wallet_password = wallet_password
         self.wallet_auto_create = wallet_auto_create
         self.wallet_create_language = wallet_create_language
+        self.daemon_nodes = [
+            node.strip() for node in (daemon_nodes or []) if node.strip()
+        ]
+        self._active_daemon_index = -1
         self._client = httpx.AsyncClient(
             timeout=timeout_seconds,
             auth=httpx.DigestAuth(username, password),
@@ -42,6 +47,44 @@ class MoneroWalletRPC:
         self._rpc_id = 0
         self._wallet_ready = False
         self._lock = asyncio.Lock()
+
+    @staticmethod
+    def _is_daemon_connection_error(exc: WalletRPCError) -> bool:
+        text = str(exc).lower()
+        return (
+            "no connection to daemon" in text
+            or "failed to connect to daemon" in text
+            or "daemon is busy" in text
+            or "daemon" in text
+            and "connection" in text
+        )
+
+    async def _set_daemon(self, node: str) -> None:
+        await self._rpc(
+            "set_daemon",
+            {
+                "address": node,
+                "trusted": True,
+            },
+        )
+
+    async def _failover_daemon(self) -> bool:
+        if not self.daemon_nodes:
+            return False
+
+        start = self._active_daemon_index
+        total = len(self.daemon_nodes)
+
+        for step in range(1, total + 1):
+            idx = (start + step) % total
+            node = self.daemon_nodes[idx]
+            try:
+                await self._set_daemon(node)
+            except WalletRPCError:
+                continue
+            self._active_daemon_index = idx
+            return True
+        return False
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -111,23 +154,47 @@ class MoneroWalletRPC:
 
             self._wallet_ready = True
 
+            if self.daemon_nodes:
+                if not await self._failover_daemon():
+                    self._active_daemon_index = 0
+
+    async def _call_with_daemon_failover(
+        self, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        try:
+            return await self._rpc(method, params)
+        except WalletRPCError as exc:
+            if not self._is_daemon_connection_error(exc):
+                raise
+            switched = await self._failover_daemon()
+            if not switched:
+                raise
+            return await self._rpc(method, params)
+
     async def create_subaddress(self, label: str) -> dict[str, Any]:
         await self.ensure_wallet_ready()
-        return await self._rpc("create_address", {"account_index": 0, "label": label})
+        return await self._call_with_daemon_failover(
+            "create_address",
+            {"account_index": 0, "label": label},
+        )
 
     async def get_balance(self) -> dict[str, Any]:
         await self.ensure_wallet_ready()
-        return await self._rpc("get_balance", {"account_index": 0})
+        return await self._call_with_daemon_failover(
+            "get_balance", {"account_index": 0}
+        )
 
     async def get_address(self) -> dict[str, Any]:
         await self.ensure_wallet_ready()
-        return await self._rpc("get_address", {"account_index": 0})
+        return await self._call_with_daemon_failover(
+            "get_address", {"account_index": 0}
+        )
 
     async def get_incoming_transfers(
         self, subaddress_index: int
     ) -> list[IncomingTransfer]:
         await self.ensure_wallet_ready()
-        result = await self._rpc(
+        result = await self._call_with_daemon_failover(
             "get_transfers",
             {
                 "in": True,

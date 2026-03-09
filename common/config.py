@@ -16,11 +16,18 @@ def _to_int(value: str | None, default: int) -> int:
     return int(value)
 
 
+def _to_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
 @dataclass(frozen=True)
 class AppSettings:
     app_env: str
     db_path: str
     digital_goods_dir: str
+    product_images_dir: str
     cookie_secure: bool
     public_base_url: str
     session_secret: str
@@ -35,6 +42,7 @@ class AppSettings:
     wallet_password: str
     wallet_auto_create: bool
     wallet_create_language: str
+    monero_remote_nodes: list[str]
 
 
 @dataclass(frozen=True)
@@ -42,6 +50,7 @@ class AdminSettings:
     app_env: str
     db_path: str
     digital_goods_dir: str
+    product_images_dir: str
     cookie_secure: bool
     session_secret: str
     wallet_rpc_url: str
@@ -51,16 +60,23 @@ class AdminSettings:
     wallet_password: str
     wallet_auto_create: bool
     wallet_create_language: str
+    monero_remote_nodes: list[str]
     admin_username: str
     admin_password: str
     admin_password_hash: str
 
 
 def load_webshop_settings() -> AppSettings:
+    primary_node = os.getenv("MONERO_REMOTE_NODE", "")
+    nodes = _to_list(os.getenv("MONERO_REMOTE_NODES"))
+    if primary_node and primary_node not in nodes:
+        nodes.insert(0, primary_node)
+
     return AppSettings(
         app_env=os.getenv("APP_ENV", "development"),
         db_path=os.getenv("DATABASE_PATH", "/data/webshop.db"),
         digital_goods_dir=os.getenv("DIGITAL_GOODS_DIR", "/data/digital_goods"),
+        product_images_dir=os.getenv("PRODUCT_IMAGES_DIR", "/data/product_images"),
         cookie_secure=_to_bool(os.getenv("COOKIE_SECURE"), default=False),
         public_base_url=os.getenv("PUBLIC_BASE_URL", "http://localhost"),
         session_secret=os.getenv("WEB_SESSION_SECRET", "change-me-web-session-secret"),
@@ -81,14 +97,21 @@ def load_webshop_settings() -> AppSettings:
         wallet_password=os.getenv("WALLET_PASSWORD", ""),
         wallet_auto_create=_to_bool(os.getenv("WALLET_AUTO_CREATE"), default=False),
         wallet_create_language=os.getenv("WALLET_CREATE_LANGUAGE", "English"),
+        monero_remote_nodes=nodes,
     )
 
 
 def load_admin_settings() -> AdminSettings:
+    primary_node = os.getenv("MONERO_REMOTE_NODE", "")
+    nodes = _to_list(os.getenv("MONERO_REMOTE_NODES"))
+    if primary_node and primary_node not in nodes:
+        nodes.insert(0, primary_node)
+
     return AdminSettings(
         app_env=os.getenv("APP_ENV", "development"),
         db_path=os.getenv("DATABASE_PATH", "/data/webshop.db"),
         digital_goods_dir=os.getenv("DIGITAL_GOODS_DIR", "/data/digital_goods"),
+        product_images_dir=os.getenv("PRODUCT_IMAGES_DIR", "/data/product_images"),
         cookie_secure=_to_bool(os.getenv("COOKIE_SECURE"), default=False),
         session_secret=os.getenv(
             "ADMIN_SESSION_SECRET", "change-me-admin-session-secret"
@@ -102,6 +125,7 @@ def load_admin_settings() -> AdminSettings:
         wallet_password=os.getenv("WALLET_PASSWORD", ""),
         wallet_auto_create=_to_bool(os.getenv("WALLET_AUTO_CREATE"), default=False),
         wallet_create_language=os.getenv("WALLET_CREATE_LANGUAGE", "English"),
+        monero_remote_nodes=nodes,
         admin_username=os.getenv("ADMIN_USERNAME", "admin"),
         admin_password=os.getenv("ADMIN_PASSWORD", ""),
         admin_password_hash=os.getenv("ADMIN_PASSWORD_HASH", ""),

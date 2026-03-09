@@ -99,6 +99,7 @@ def ensure_admin_user(conn: sqlite3.Connection) -> None:
 @app.on_event("startup")
 async def startup() -> None:
     Path(settings.digital_goods_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.product_images_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     conn = db_conn()
@@ -115,6 +116,7 @@ async def startup() -> None:
         wallet_file=settings.wallet_file,
         wallet_password=settings.wallet_password,
         wallet_auto_create=settings.wallet_auto_create,
+        daemon_nodes=settings.monero_remote_nodes,
         wallet_create_language=settings.wallet_create_language,
     )
 
@@ -229,7 +231,7 @@ async def products_list(request: Request):
     try:
         products = conn.execute(
             """
-            SELECT id, slug, title, price_atomic, delivery_type, file_path, is_active, is_archived, updated_at
+            SELECT id, slug, title, price_atomic, delivery_type, file_path, image_url, image_path, is_active, is_archived, updated_at
             FROM products
             ORDER BY created_at DESC
             """
@@ -275,6 +277,32 @@ async def resolve_product_file(
     raise ValueError("Provide an existing file path or upload a file")
 
 
+async def resolve_product_image(
+    image_url: str,
+    upload_image: UploadFile | None,
+    current_image_url: str = "",
+    current_image_path: str = "",
+) -> tuple[str, str]:
+    if upload_image and upload_image.filename:
+        safe_name = sanitize_filename(upload_image.filename)
+        final_name = f"{random_token(6)}-{safe_name}"
+        target = Path(settings.product_images_dir) / final_name
+        content = await upload_image.read()
+        target.write_bytes(content)
+        return "", final_name
+
+    clean_url = image_url.strip()
+    if clean_url:
+        if not (clean_url.startswith("http://") or clean_url.startswith("https://")):
+            raise ValueError("Image URL must start with http:// or https://")
+        return clean_url, ""
+
+    if current_image_url or current_image_path:
+        return current_image_url, current_image_path
+
+    return "", ""
+
+
 @app.post("/products/new")
 async def product_new_post(
     request: Request,
@@ -286,6 +314,8 @@ async def product_new_post(
     delivery_type: str = Form("file"),
     existing_file_path: str = Form(""),
     upload_file: UploadFile | None = File(None),
+    image_url: str = Form(""),
+    upload_image: UploadFile | None = File(None),
     is_active: str | None = Form(None),
     csrf_token: str = Form(...),
 ):
@@ -299,6 +329,10 @@ async def product_new_post(
         final_slug = slugify(slug or title)
         price_atomic = parse_xmr_to_atomic(price_xmr)
         file_path = await resolve_product_file(existing_file_path, upload_file)
+        final_image_url, final_image_path = await resolve_product_image(
+            image_url,
+            upload_image,
+        )
     except ValueError as exc:
         return templates.TemplateResponse(
             "product_form.html",
@@ -325,11 +359,13 @@ async def product_new_post(
                     price_atomic,
                     delivery_type,
                     file_path,
+                    image_url,
+                    image_path,
                     is_active,
                     is_archived,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
                 """,
                 (
                     final_slug,
@@ -339,6 +375,8 @@ async def product_new_post(
                     price_atomic,
                     delivery_type,
                     file_path,
+                    final_image_url or None,
+                    final_image_path or None,
                     1 if is_active else 0,
                     now_iso,
                     now_iso,
@@ -376,7 +414,7 @@ async def product_edit_get(request: Request, product_id: int):
         product = conn.execute(
             """
             SELECT id, slug, title, short_description, long_description, price_atomic,
-                   delivery_type, file_path, is_active, is_archived
+                   delivery_type, file_path, image_url, image_path, is_active, is_archived
             FROM products
             WHERE id = ?
             """,
@@ -410,6 +448,8 @@ async def product_edit_post(
     delivery_type: str = Form("file"),
     existing_file_path: str = Form(""),
     upload_file: UploadFile | None = File(None),
+    image_url: str = Form(""),
+    upload_image: UploadFile | None = File(None),
     is_active: str | None = Form(None),
     is_archived: str | None = Form(None),
     csrf_token: str = Form(...),
@@ -423,7 +463,7 @@ async def product_edit_post(
     conn = db_conn()
     try:
         existing = conn.execute(
-            "SELECT file_path FROM products WHERE id = ?",
+            "SELECT file_path, image_url, image_path FROM products WHERE id = ?",
             (product_id,),
         ).fetchone()
         if not existing:
@@ -434,6 +474,12 @@ async def product_edit_post(
             price_atomic = parse_xmr_to_atomic(price_xmr)
             file_path = await resolve_product_file(
                 existing_file_path, upload_file, str(existing["file_path"])
+            )
+            final_image_url, final_image_path = await resolve_product_image(
+                image_url,
+                upload_image,
+                str(existing["image_url"] or ""),
+                str(existing["image_path"] or ""),
             )
         except ValueError as exc:
             return templates.TemplateResponse(
@@ -449,6 +495,8 @@ async def product_edit_post(
                         "price_atomic": 0,
                         "delivery_type": delivery_type,
                         "file_path": existing_file_path,
+                        "image_url": image_url,
+                        "image_path": str(existing["image_path"] or ""),
                         "is_active": 1 if is_active else 0,
                         "is_archived": 1 if is_archived else 0,
                     },
@@ -470,6 +518,8 @@ async def product_edit_post(
                     price_atomic = ?,
                     delivery_type = ?,
                     file_path = ?,
+                    image_url = ?,
+                    image_path = ?,
                     is_active = ?,
                     is_archived = ?,
                     updated_at = ?
@@ -483,6 +533,8 @@ async def product_edit_post(
                     price_atomic,
                     delivery_type,
                     file_path,
+                    final_image_url or None,
+                    final_image_path or None,
                     1 if is_active else 0,
                     1 if is_archived else 0,
                     utcnow_iso(),

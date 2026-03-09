@@ -5,6 +5,7 @@ import sqlite3
 import time
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
@@ -49,6 +50,17 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["format_xmr"] = atomic_to_xmr
+
+
+def product_image_src(image_url: str | None, image_path: str | None) -> str:
+    if image_url:
+        return image_url
+    if image_path:
+        return f"/media/product/{quote(image_path)}"
+    return ""
+
+
+templates.env.globals["product_image_src"] = product_image_src
 
 
 def db_conn() -> sqlite3.Connection:
@@ -144,6 +156,7 @@ def template_context(request: Request, **extra: object) -> dict[str, object]:
 @app.on_event("startup")
 async def startup() -> None:
     Path(settings.digital_goods_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.product_images_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     conn = db_conn()
@@ -159,6 +172,7 @@ async def startup() -> None:
         wallet_file=settings.wallet_file,
         wallet_password=settings.wallet_password,
         wallet_auto_create=settings.wallet_auto_create,
+        daemon_nodes=settings.monero_remote_nodes,
         wallet_create_language=settings.wallet_create_language,
     )
     app.state.wallet = wallet
@@ -198,7 +212,7 @@ async def index(request: Request):
     try:
         products = conn.execute(
             """
-            SELECT id, slug, title, short_description, price_atomic
+            SELECT id, slug, title, short_description, price_atomic, image_url, image_path
             FROM products
             WHERE is_active = 1 AND is_archived = 0
             ORDER BY created_at DESC
@@ -219,7 +233,7 @@ async def product_detail(request: Request, slug: str):
     try:
         product = conn.execute(
             """
-            SELECT id, slug, title, short_description, long_description, price_atomic
+            SELECT id, slug, title, short_description, long_description, price_atomic, image_url, image_path
             FROM products
             WHERE slug = ? AND is_active = 1 AND is_archived = 0
             """,
@@ -624,3 +638,23 @@ async def download_item(order_token: str, item_id: int, exp: int, sig: str):
     return FileResponse(
         path=full_path, filename=filename, media_type="application/octet-stream"
     )
+
+
+@app.get("/media/product/{image_name:path}")
+async def product_image(image_name: str):
+    try:
+        relative_path = validate_relative_file(settings.product_images_dir, image_name)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    full_path = str((Path(settings.product_images_dir) / relative_path).resolve())
+    suffix = Path(relative_path).suffix.lower()
+    media_type = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+    }.get(suffix, "application/octet-stream")
+    return FileResponse(path=full_path, media_type=media_type)

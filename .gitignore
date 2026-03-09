@@ -11,6 +11,9 @@ dist/
 *.egg-info/
 
 .env
+.env.*
+!.env.example
+!.env.staging.example
 data/
 
 .DS_Store

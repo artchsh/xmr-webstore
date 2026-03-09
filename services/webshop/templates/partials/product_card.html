@@ -1,4 +1,8 @@
 <article class="card">
+  {% set image_src = product_image_src(product.image_url, product.image_path) %}
+  {% if image_src %}
+    <p><img src="{{ image_src }}" alt="{{ product.title }}" class="product-image"></p>
+  {% endif %}
   <h2><a href="/product/{{ product.slug }}">{{ product.title }}</a></h2>
   <p>{{ product.short_description }}</p>
   <p><strong>{{ format_xmr(product.price_atomic) }} XMR</strong></p>

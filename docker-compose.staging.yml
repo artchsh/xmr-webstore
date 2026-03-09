@@ -1,0 +1,25 @@
+services:
+  caddy:
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      SHOP_DOMAIN: ${SHOP_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-staging@example.com}
+
+  webshop:
+    env_file:
+      - .env.staging
+
+  admin:
+    env_file:
+      - .env.staging
+    ports:
+      - "127.0.0.1:${ADMIN_LOCAL_PORT:-18081}:8001"
+
+  wallet-rpc:
+    env_file:
+      - .env.staging
+
+  tor:
+    restart: unless-stopped

@@ -103,7 +103,11 @@ MIGRATIONS: list[str] = [
     CREATE INDEX IF NOT EXISTS idx_payment_requests_order_id ON payment_requests(order_id);
     CREATE INDEX IF NOT EXISTS idx_analytics_event_type ON analytics_events(event_type);
     CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at);
+    """,
     """
+    ALTER TABLE products ADD COLUMN image_url TEXT;
+    ALTER TABLE products ADD COLUMN image_path TEXT;
+    """,
 ]
 
 

@@ -52,6 +52,20 @@
   </label>
 
   <label>
+    Image URL (optional)
+    <input type="text" name="image_url" value="{{ product.image_url if product else '' }}">
+  </label>
+
+  <label>
+    Upload image (optional)
+    <input type="file" name="upload_image" accept="image/*">
+  </label>
+
+  {% if product and product.image_path %}
+    <p>Current uploaded image: <code>{{ product.image_path }}</code></p>
+  {% endif %}
+
+  <label>
     <input type="checkbox" name="is_active" value="1" {% if not product or product.is_active %}checked{% endif %}>
     Active
   </label>
