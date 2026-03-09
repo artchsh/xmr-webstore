@@ -18,6 +18,7 @@ from common.config import AppSettings, load_webshop_settings
 from common.db import connect_db
 from common.migrations import run_migrations
 from common.order_poller import order_polling_loop
+from common.shop_settings import ShopBranding, get_shop_branding
 from common.security import (
     ensure_csrf_token,
     generate_download_signature,
@@ -61,6 +62,46 @@ def product_image_src(image_url: str | None, image_path: str | None) -> str:
 
 
 templates.env.globals["product_image_src"] = product_image_src
+
+
+def shop_logo_src(branding: ShopBranding) -> str:
+    if branding.logo_url:
+        return branding.logo_url
+    if branding.logo_path:
+        return f"/media/branding/{quote(branding.logo_path)}"
+    return ""
+
+
+def absolute_url(request: Request, value: str) -> str:
+    if value.startswith("http://") or value.startswith("https://"):
+        return value
+    return str(request.url_for("index")).rstrip("/") + value
+
+
+def media_type_for_suffix(path: str) -> str:
+    suffix = Path(path).suffix.lower()
+    return {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+    }.get(suffix, "application/octet-stream")
+
+
+def load_branding() -> ShopBranding:
+    conn = db_conn()
+    try:
+        return get_shop_branding(
+            conn,
+            default_name=settings.shop_name,
+            default_owner=settings.shop_owner,
+            default_logo_url=settings.shop_logo_url,
+        )
+    finally:
+        conn.close()
 
 
 def db_conn() -> sqlite3.Connection:
@@ -144,10 +185,16 @@ def load_cart_items(
 
 def template_context(request: Request, **extra: object) -> dict[str, object]:
     cart = get_cart(request)
+    branding = load_branding()
     context: dict[str, object] = {
         "request": request,
         "csrf_token": ensure_csrf_token(request.session),
         "cart_count": cart_count(cart),
+        "shop_name": branding.name,
+        "shop_owner": branding.owner,
+        "shop_logo_src": shop_logo_src(branding),
+        "search_query": request.query_params.get("q", ""),
+        "structured_data_list": [],
     }
     context.update(extra)
     return context
@@ -157,6 +204,7 @@ def template_context(request: Request, **extra: object) -> dict[str, object]:
 async def startup() -> None:
     Path(settings.digital_goods_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.product_images_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.branding_assets_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     conn = db_conn()
@@ -207,23 +255,72 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/")
-async def index(request: Request):
+async def index(request: Request, q: str = ""):
     conn = db_conn()
     try:
-        products = conn.execute(
-            """
-            SELECT id, slug, title, short_description, price_atomic, image_url, image_path
-            FROM products
-            WHERE is_active = 1 AND is_archived = 0
-            ORDER BY created_at DESC
-            """
-        ).fetchall()
+        if q.strip():
+            pattern = f"%{q.strip()}%"
+            products = conn.execute(
+                """
+                SELECT id, slug, title, short_description, price_atomic, image_url, image_path
+                FROM products
+                WHERE is_active = 1
+                  AND is_archived = 0
+                  AND (
+                    title LIKE ? OR
+                    slug LIKE ? OR
+                    short_description LIKE ?
+                  )
+                ORDER BY created_at DESC
+                """,
+                (pattern, pattern, pattern),
+            ).fetchall()
+        else:
+            products = conn.execute(
+                """
+                SELECT id, slug, title, short_description, price_atomic, image_url, image_path
+                FROM products
+                WHERE is_active = 1 AND is_archived = 0
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
     finally:
         conn.close()
 
+    branding = load_branding()
+    shop_url = str(request.url_for("index"))
+    structured_data_list = [
+        {
+            "@context": "https://schema.org",
+            "@type": "Store",
+            "name": branding.name,
+            "url": shop_url,
+            "owner": branding.owner,
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": branding.name,
+            "url": shop_url,
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": f"{shop_url}?q={{search_term_string}}",
+                "query-input": "required name=search_term_string",
+            },
+        },
+    ]
+    logo_src = shop_logo_src(branding)
+    if logo_src:
+        structured_data_list[0]["logo"] = absolute_url(request, logo_src)
+
     return templates.TemplateResponse(
         "index.html",
-        template_context(request, products=products),
+        template_context(
+            request,
+            products=products,
+            search_query=q,
+            structured_data_list=structured_data_list,
+        ),
     )
 
 
@@ -244,12 +341,50 @@ async def product_detail(request: Request, slug: str):
 
         with conn:
             track_event(conn, "product_page_view", product_id=int(product["id"]))
+
+        other_products = conn.execute(
+            """
+            SELECT id, slug, title, short_description, price_atomic, image_url, image_path
+            FROM products
+            WHERE id != ? AND is_active = 1 AND is_archived = 0
+            ORDER BY created_at DESC
+            LIMIT 6
+            """,
+            (int(product["id"]),),
+        ).fetchall()
     finally:
         conn.close()
 
+    product_url = str(request.url_for("product_detail", slug=slug))
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": str(product["title"]),
+        "description": str(product["short_description"]),
+        "url": product_url,
+        "offers": {
+            "@type": "Offer",
+            "price": atomic_to_xmr(int(product["price_atomic"])),
+            "priceCurrency": "XMR",
+            "availability": "https://schema.org/InStock",
+            "url": product_url,
+        },
+    }
+    image_src = product_image_src(
+        str(product["image_url"] or ""),
+        str(product["image_path"] or ""),
+    )
+    if image_src:
+        structured_data["image"] = absolute_url(request, image_src)
+
     return templates.TemplateResponse(
         "product_detail.html",
-        template_context(request, product=product),
+        template_context(
+            request,
+            product=product,
+            other_products=other_products,
+            structured_data_list=[structured_data],
+        ),
     )
 
 
@@ -648,13 +783,15 @@ async def product_image(image_name: str):
         raise HTTPException(status_code=404, detail="Image not found")
 
     full_path = str((Path(settings.product_images_dir) / relative_path).resolve())
-    suffix = Path(relative_path).suffix.lower()
-    media_type = {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
-        ".svg": "image/svg+xml",
-    }.get(suffix, "application/octet-stream")
-    return FileResponse(path=full_path, media_type=media_type)
+    return FileResponse(path=full_path, media_type=media_type_for_suffix(relative_path))
+
+
+@app.get("/media/branding/{image_name:path}")
+async def branding_image(image_name: str):
+    try:
+        relative_path = validate_relative_file(settings.branding_assets_dir, image_name)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    full_path = str((Path(settings.branding_assets_dir) / relative_path).resolve())
+    return FileResponse(path=full_path, media_type=media_type_for_suffix(relative_path))

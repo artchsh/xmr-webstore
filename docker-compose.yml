@@ -27,6 +27,8 @@ services:
     environment:
       DATABASE_PATH: /data/webshop.db
       DIGITAL_GOODS_DIR: /data/digital_goods
+      PRODUCT_IMAGES_DIR: /data/product_images
+      BRANDING_ASSETS_DIR: /data/branding
       WALLET_RPC_URL: http://wallet-rpc:18083/json_rpc
     volumes:
       - app_data:/data
@@ -46,6 +48,8 @@ services:
     environment:
       DATABASE_PATH: /data/webshop.db
       DIGITAL_GOODS_DIR: /data/digital_goods
+      PRODUCT_IMAGES_DIR: /data/product_images
+      BRANDING_ASSETS_DIR: /data/branding
       WALLET_RPC_URL: http://wallet-rpc:18083/json_rpc
     volumes:
       - app_data:/data

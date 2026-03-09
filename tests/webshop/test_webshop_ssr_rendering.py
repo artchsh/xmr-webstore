@@ -29,7 +29,8 @@ def test_product_page_and_checkout_render_without_required_javascript(
     assert detail.status_code == 200
     assert f'name="product_id" value="{product_id}"' in detail.text
     assert '<input type="number" name="quantity"' in detail.text
-    assert "<script" not in detail.text.lower()
+    assert "<script src=" not in detail.text.lower()
+    assert "fetch(" not in detail.text
 
     csrf = extract_csrf_token(detail.text)
     webshop_client.post(
@@ -41,7 +42,7 @@ def test_product_page_and_checkout_render_without_required_javascript(
     assert checkout.status_code == 200
     assert "Total to pay: 3 XMR" in checkout.text
     assert '<form method="post" action="/checkout">' in checkout.text
-    assert "<script" not in checkout.text.lower()
+    assert "<script src=" not in checkout.text.lower()
 
 
 def test_order_page_status_messages_and_download_visibility(
@@ -100,3 +101,12 @@ def test_product_image_url_renders_in_storefront(
     response = webshop_client.get("/")
     assert response.status_code == 200
     assert 'src="https://example.com/image.png"' in response.text
+
+
+def test_product_page_includes_json_ld_schema(webshop_client, create_product) -> None:
+    create_product(slug="seo-product", title="SEO Product")
+    response = webshop_client.get("/product/seo-product")
+
+    assert response.status_code == 200
+    assert 'type="application/ld+json"' in response.text
+    assert '"@type": "Product"' in response.text

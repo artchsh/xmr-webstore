@@ -1,7 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Storefront{% endblock %}
+{% block title %}{{ shop_name }}{% endblock %}
 {% block content %}
-<h1>Digital Goods</h1>
+<h2>Digital Goods</h2>
+
+{% if search_query %}
+  <p>Search: <strong>{{ search_query }}</strong></p>
+{% endif %}
 
 {% if products %}
   <section class="grid">
@@ -10,6 +14,10 @@
     {% endfor %}
   </section>
 {% else %}
-  <p>No products published yet.</p>
+  {% if search_query %}
+    <p>No matching products.</p>
+  {% else %}
+    <p>No products published yet.</p>
+  {% endif %}
 {% endif %}
 {% endblock %}

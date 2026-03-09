@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,6 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from common.config import AdminSettings, load_admin_settings
 from common.db import connect_db
 from common.migrations import run_migrations
+from common.shop_settings import ShopBranding, get_shop_branding, upsert_shop_setting
 from common.security import (
     ensure_csrf_token,
     hash_password,
@@ -48,6 +50,19 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["format_xmr"] = atomic_to_xmr
 
 
+def media_type_for_suffix(path: str) -> str:
+    suffix = Path(path).suffix.lower()
+    return {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+    }.get(suffix, "application/octet-stream")
+
+
 def db_conn() -> sqlite3.Connection:
     return connect_db(settings.db_path)
 
@@ -58,11 +73,37 @@ def admin_redirect(request: Request):
     return None
 
 
+def shop_logo_src(branding: ShopBranding) -> str:
+    if branding.logo_url:
+        return branding.logo_url
+    if branding.logo_path:
+        return f"/media/branding/{quote(branding.logo_path)}"
+    return ""
+
+
+def load_branding(conn: sqlite3.Connection) -> ShopBranding:
+    return get_shop_branding(
+        conn,
+        default_name=settings.shop_name,
+        default_owner=settings.shop_owner,
+        default_logo_url=settings.shop_logo_url,
+    )
+
+
 def template_context(request: Request, **extra: object) -> dict[str, object]:
+    conn = db_conn()
+    try:
+        branding = load_branding(conn)
+    finally:
+        conn.close()
+
     context = {
         "request": request,
         "csrf_token": ensure_csrf_token(request.session),
         "admin_username": request.session.get("admin_username"),
+        "shop_name": branding.name,
+        "shop_owner": branding.owner,
+        "shop_logo_src": shop_logo_src(branding),
     }
     context.update(extra)
     return context
@@ -100,6 +141,7 @@ def ensure_admin_user(conn: sqlite3.Connection) -> None:
 async def startup() -> None:
     Path(settings.digital_goods_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.product_images_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.branding_assets_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     conn = db_conn()
@@ -131,6 +173,17 @@ async def shutdown() -> None:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/media/branding/{image_name:path}")
+async def branding_image(image_name: str):
+    try:
+        relative_path = validate_relative_file(settings.branding_assets_dir, image_name)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    full_path = str((Path(settings.branding_assets_dir) / relative_path).resolve())
+    return FileResponse(path=full_path, media_type=media_type_for_suffix(relative_path))
 
 
 @app.get("/login")
@@ -221,26 +274,140 @@ async def dashboard(request: Request):
     )
 
 
-@app.get("/products")
-async def products_list(request: Request):
+async def resolve_brand_logo(
+    logo_url: str,
+    upload_logo: UploadFile | None,
+    current_logo_url: str,
+    current_logo_path: str,
+) -> tuple[str, str]:
+    if upload_logo and upload_logo.filename:
+        safe_name = sanitize_filename(upload_logo.filename)
+        final_name = f"{random_token(6)}-{safe_name}"
+        target = Path(settings.branding_assets_dir) / final_name
+        content = await upload_logo.read()
+        target.write_bytes(content)
+        return "", final_name
+
+    clean_url = logo_url.strip()
+    if clean_url:
+        if not (clean_url.startswith("http://") or clean_url.startswith("https://")):
+            raise ValueError("Logo URL must start with http:// or https://")
+        return clean_url, ""
+
+    if current_logo_url or current_logo_path:
+        return current_logo_url, current_logo_path
+
+    return "", ""
+
+
+@app.get("/settings")
+async def settings_get(request: Request):
     redirect = admin_redirect(request)
     if redirect is not None:
         return redirect
 
     conn = db_conn()
     try:
-        products = conn.execute(
-            """
-            SELECT id, slug, title, price_atomic, delivery_type, file_path, image_url, image_path, is_active, is_archived, updated_at
-            FROM products
-            ORDER BY created_at DESC
-            """
-        ).fetchall()
+        branding = load_branding(conn)
     finally:
         conn.close()
 
     return templates.TemplateResponse(
-        "products.html", template_context(request, products=products)
+        "settings.html",
+        template_context(request, branding=branding, error=None),
+    )
+
+
+@app.post("/settings")
+async def settings_post(
+    request: Request,
+    shop_name: str = Form(...),
+    shop_owner: str = Form(""),
+    shop_logo_url: str = Form(""),
+    upload_logo: UploadFile | None = File(None),
+    csrf_token: str = Form(...),
+):
+    redirect = admin_redirect(request)
+    if redirect is not None:
+        return redirect
+    if not validate_csrf(request.session, csrf_token):
+        raise HTTPException(status_code=400, detail="Invalid CSRF token")
+
+    conn = db_conn()
+    try:
+        current = load_branding(conn)
+        try:
+            logo_url, logo_path = await resolve_brand_logo(
+                shop_logo_url,
+                upload_logo,
+                current.logo_url,
+                current.logo_path,
+            )
+        except ValueError as exc:
+            return templates.TemplateResponse(
+                "settings.html",
+                template_context(
+                    request,
+                    branding=current,
+                    error=str(exc),
+                ),
+                status_code=400,
+            )
+
+        if not shop_name.strip():
+            return templates.TemplateResponse(
+                "settings.html",
+                template_context(
+                    request,
+                    branding=current,
+                    error="Shop name cannot be empty",
+                ),
+                status_code=400,
+            )
+
+        with conn:
+            upsert_shop_setting(conn, "shop_name", shop_name.strip())
+            upsert_shop_setting(conn, "shop_owner", shop_owner.strip())
+            upsert_shop_setting(conn, "shop_logo_url", logo_url)
+            upsert_shop_setting(conn, "shop_logo_path", logo_path)
+    finally:
+        conn.close()
+
+    return RedirectResponse(url="/settings", status_code=303)
+
+
+@app.get("/products")
+async def products_list(request: Request, q: str = ""):
+    redirect = admin_redirect(request)
+    if redirect is not None:
+        return redirect
+
+    conn = db_conn()
+    try:
+        if q.strip():
+            pattern = f"%{q.strip()}%"
+            products = conn.execute(
+                """
+                SELECT id, slug, title, price_atomic, delivery_type, file_path, image_url, image_path, is_active, is_archived, updated_at
+                FROM products
+                WHERE title LIKE ? OR slug LIKE ? OR short_description LIKE ?
+                ORDER BY created_at DESC
+                """,
+                (pattern, pattern, pattern),
+            ).fetchall()
+        else:
+            products = conn.execute(
+                """
+                SELECT id, slug, title, price_atomic, delivery_type, file_path, image_url, image_path, is_active, is_archived, updated_at
+                FROM products
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+    finally:
+        conn.close()
+
+    return templates.TemplateResponse(
+        "products.html", template_context(request, products=products, search_query=q)
     )
 
 

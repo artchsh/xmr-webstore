@@ -204,6 +204,19 @@ def test_orders_list_and_order_detail_pages(
     assert completed["payment_subaddress"] in detail.text
 
 
+def test_admin_product_search_filters_results(
+    admin_client_logged_in,
+    create_product,
+) -> None:
+    create_product(slug="alpha-admin", title="Alpha Admin Product")
+    create_product(slug="beta-admin", title="Beta Admin Product")
+
+    response = admin_client_logged_in.get("/products?q=alpha")
+    assert response.status_code == 200
+    assert "Alpha Admin Product" in response.text
+    assert "Beta Admin Product" not in response.text
+
+
 def test_order_cancel_action(
     admin_client_logged_in,
     sqlite_conn: sqlite3.Connection,
@@ -323,3 +336,36 @@ def test_admin_product_image_url_saved(
     ).fetchone()
     assert row["image_url"] == "https://example.com/product.png"
     assert row["image_path"] is None
+
+
+def test_admin_settings_update_branding(
+    admin_client_logged_in,
+    sqlite_conn: sqlite3.Connection,
+) -> None:
+    page = admin_client_logged_in.get("/settings")
+    assert page.status_code == 200
+    csrf = extract_csrf_token(page.text)
+
+    response = admin_client_logged_in.post(
+        "/settings",
+        data={
+            "shop_name": "Privacy Bazaar",
+            "shop_owner": "Anonymous Seller",
+            "shop_logo_url": "https://example.com/logo.png",
+            "csrf_token": csrf,
+        },
+        files={"_multipart": ("dummy.txt", b"x", "text/plain")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/settings"
+
+    values = {
+        row["setting_key"]: row["setting_value"]
+        for row in sqlite_conn.execute(
+            "SELECT setting_key, setting_value FROM shop_settings"
+        ).fetchall()
+    }
+    assert values["shop_name"] == "Privacy Bazaar"
+    assert values["shop_owner"] == "Anonymous Seller"
+    assert values["shop_logo_url"] == "https://example.com/logo.png"

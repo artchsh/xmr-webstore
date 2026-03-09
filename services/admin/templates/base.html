@@ -8,11 +8,22 @@
   </head>
   <body>
     <header>
-      <h1>xmr-webshop admin</h1>
+      <div class="brand-row">
+        {% if shop_logo_src %}
+          <img src="{{ shop_logo_src }}" alt="{{ shop_name }}" class="brand-logo">
+        {% endif %}
+        <div class="brand-copy">
+          <h1>{{ shop_name }} admin</h1>
+          {% if shop_owner %}
+            <p>Owner: {{ shop_owner }}</p>
+          {% endif %}
+        </div>
+      </div>
       {% if admin_username %}
         <nav>
           <a href="/">Dashboard</a>
           <a href="/products">Products</a>
+          <a href="/settings">Settings</a>
           <a href="/orders">Orders</a>
           <a href="/wallet">Wallet</a>
           <a href="/analytics">Analytics</a>

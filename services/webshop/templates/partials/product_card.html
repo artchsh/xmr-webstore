@@ -1,7 +1,14 @@
 <article class="card">
   {% set image_src = product_image_src(product.image_url, product.image_path) %}
+  {% set use_fallback_logo = false %}
+  {% if not image_src and shop_logo_src %}
+    {% set image_src = shop_logo_src %}
+    {% set use_fallback_logo = true %}
+  {% endif %}
   {% if image_src %}
-    <p><img src="{{ image_src }}" alt="{{ product.title }}" class="product-image"></p>
+    <div class="product-thumb {% if use_fallback_logo %}product-thumb--fallback{% endif %}">
+      <img src="{{ image_src }}" alt="{{ product.title }}" class="product-thumb-image {% if use_fallback_logo %}product-thumb-image--fallback{% endif %}">
+    </div>
   {% endif %}
   <h2><a href="/product/{{ product.slug }}">{{ product.title }}</a></h2>
   <p>{{ product.short_description }}</p>

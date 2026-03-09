@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h2>Shop Settings</h2>
+
+{% if error %}
+  <p class="error">{{ error }}</p>
+{% endif %}
+
+<form method="post" action="/settings" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <label>
+    Shop name
+    <input type="text" name="shop_name" required value="{{ branding.name }}">
+  </label>
+
+  <label>
+    Shop owner
+    <input type="text" name="shop_owner" value="{{ branding.owner }}">
+  </label>
+
+  <label>
+    Logo URL
+    <input type="text" name="shop_logo_url" value="{{ branding.logo_url }}" placeholder="https://example.com/logo.png">
+  </label>
+
+  <label>
+    Upload logo PNG/JPG
+    <input type="file" name="upload_logo" accept="image/*">
+  </label>
+
+  {% if shop_logo_src %}
+    <p>Current logo:</p>
+    <p><img src="{{ shop_logo_src }}" alt="{{ branding.name }}" class="brand-logo"></p>
+  {% endif %}
+
+  <button type="submit">Save settings</button>
+</form>
+{% endblock %}

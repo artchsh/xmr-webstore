@@ -1,5 +1,11 @@
 # Deployment Instructions
 
+For beginner-first setup guides, also see:
+
+- `docs/quickstart.md`
+- `docs/vps-dns.md`
+- `docs/configuration.md`
+
 This project supports three operating modes:
 
 1. Production (`docker-compose.yml`)
@@ -38,6 +44,10 @@ cp .env.example .env
   - `TOR_SOCKS_DISABLED=false`
 - set HTTPS cookie mode:
   - `COOKIE_SECURE=true`
+- optional branding defaults in env:
+  - `SHOP_NAME`
+  - `SHOP_OWNER`
+  - `SHOP_LOGO_URL`
 
 3. Start production stack:
 
@@ -132,3 +142,14 @@ docker compose up -d --build
   - uploaded image file
 - Uploaded images are stored in `PRODUCT_IMAGES_DIR` (default `/data/product_images`).
 - Storefront serves uploaded images from `/media/product/<filename>`.
+
+## Shop Branding
+
+- Use admin `Settings` page to configure:
+  - shop name
+  - shop owner
+  - logo URL or uploaded logo
+- Uploaded branding assets are stored in `BRANDING_ASSETS_DIR` (default `/data/branding`).
+- Uploaded logo is served from `/media/branding/<filename>`.
+- Current MVP uses the uploaded/logo URL directly as favicon.
+- Automatic multi-size icon generation (`.ico`, PWA icon set, manifest) is intentionally not included yet.

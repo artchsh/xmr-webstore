@@ -262,3 +262,13 @@ def test_public_flow_is_html_form_based(webshop_client, create_product) -> None:
     assert "text/html" in response.headers["content-type"]
     assert '<form method="post" action="/cart/add">' in response.text
     assert "fetch(" not in response.text
+
+
+def test_storefront_search_filters_products(webshop_client, create_product) -> None:
+    create_product(slug="alpha", title="Alpha Bundle")
+    create_product(slug="beta", title="Beta Bundle")
+
+    response = webshop_client.get("/?q=alpha")
+    assert response.status_code == 200
+    assert "Alpha Bundle" in response.text
+    assert "Beta Bundle" not in response.text

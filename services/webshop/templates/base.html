@@ -3,15 +3,36 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}xmr-webshop{% endblock %}</title>
+    <title>{% block title %}{{ shop_name }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/styles.css">
+    {% if shop_logo_src %}
+      <link rel="icon" href="{{ shop_logo_src }}">
+    {% endif %}
+    {% for schema in structured_data_list %}
+      <script type="application/ld+json">{{ schema | tojson }}</script>
+    {% endfor %}
   </head>
   <body>
     <header>
+      <div class="brand-row">
+        {% if shop_logo_src %}
+          <img src="{{ shop_logo_src }}" alt="{{ shop_name }}" class="brand-logo">
+        {% endif %}
+        <div class="brand-copy">
+          <h1>{{ shop_name }}</h1>
+          {% if shop_owner %}
+            <p>by {{ shop_owner }}</p>
+          {% endif %}
+        </div>
+      </div>
       <nav>
         <a href="/">Storefront</a>
         <a href="/cart">Cart ({{ cart_count }})</a>
       </nav>
+      <form method="get" action="/" class="search-form">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search products">
+        <button type="submit">Search</button>
+      </form>
     </header>
     <main>
       {% block content %}{% endblock %}

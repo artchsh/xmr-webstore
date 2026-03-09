@@ -34,14 +34,17 @@ def app_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     db_path = tmp_path / "test-webshop.db"
     goods_dir = tmp_path / "digital_goods"
     images_dir = tmp_path / "product_images"
+    branding_dir = tmp_path / "branding"
     goods_dir.mkdir(parents=True, exist_ok=True)
     images_dir.mkdir(parents=True, exist_ok=True)
+    branding_dir.mkdir(parents=True, exist_ok=True)
 
     env = {
         "APP_ENV": "test",
         "DATABASE_PATH": str(db_path),
         "DIGITAL_GOODS_DIR": str(goods_dir),
         "PRODUCT_IMAGES_DIR": str(images_dir),
+        "BRANDING_ASSETS_DIR": str(branding_dir),
         "COOKIE_SECURE": "false",
         "PUBLIC_BASE_URL": "http://testserver",
         "WEB_SESSION_SECRET": "test-web-session-secret",
@@ -71,6 +74,7 @@ def app_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "db_path": db_path,
         "digital_goods_dir": goods_dir,
         "product_images_dir": images_dir,
+        "branding_assets_dir": branding_dir,
         "admin_username": env["ADMIN_USERNAME"],
         "admin_password": env["ADMIN_PASSWORD"],
         "download_token_secret": env["DOWNLOAD_TOKEN_SECRET"],

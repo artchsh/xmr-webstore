@@ -28,8 +28,12 @@ class AppSettings:
     db_path: str
     digital_goods_dir: str
     product_images_dir: str
+    branding_assets_dir: str
     cookie_secure: bool
     public_base_url: str
+    shop_name: str
+    shop_owner: str
+    shop_logo_url: str
     session_secret: str
     download_token_secret: str
     order_expiry_minutes: int
@@ -51,7 +55,12 @@ class AdminSettings:
     db_path: str
     digital_goods_dir: str
     product_images_dir: str
+    branding_assets_dir: str
     cookie_secure: bool
+    public_base_url: str
+    shop_name: str
+    shop_owner: str
+    shop_logo_url: str
     session_secret: str
     wallet_rpc_url: str
     wallet_rpc_username: str
@@ -77,8 +86,12 @@ def load_webshop_settings() -> AppSettings:
         db_path=os.getenv("DATABASE_PATH", "/data/webshop.db"),
         digital_goods_dir=os.getenv("DIGITAL_GOODS_DIR", "/data/digital_goods"),
         product_images_dir=os.getenv("PRODUCT_IMAGES_DIR", "/data/product_images"),
+        branding_assets_dir=os.getenv("BRANDING_ASSETS_DIR", "/data/branding"),
         cookie_secure=_to_bool(os.getenv("COOKIE_SECURE"), default=False),
         public_base_url=os.getenv("PUBLIC_BASE_URL", "http://localhost"),
+        shop_name=os.getenv("SHOP_NAME", "xmr-webshop"),
+        shop_owner=os.getenv("SHOP_OWNER", ""),
+        shop_logo_url=os.getenv("SHOP_LOGO_URL", ""),
         session_secret=os.getenv("WEB_SESSION_SECRET", "change-me-web-session-secret"),
         download_token_secret=os.getenv(
             "DOWNLOAD_TOKEN_SECRET", "change-me-download-secret"
@@ -112,7 +125,12 @@ def load_admin_settings() -> AdminSettings:
         db_path=os.getenv("DATABASE_PATH", "/data/webshop.db"),
         digital_goods_dir=os.getenv("DIGITAL_GOODS_DIR", "/data/digital_goods"),
         product_images_dir=os.getenv("PRODUCT_IMAGES_DIR", "/data/product_images"),
+        branding_assets_dir=os.getenv("BRANDING_ASSETS_DIR", "/data/branding"),
         cookie_secure=_to_bool(os.getenv("COOKIE_SECURE"), default=False),
+        public_base_url=os.getenv("PUBLIC_BASE_URL", "http://localhost"),
+        shop_name=os.getenv("SHOP_NAME", "xmr-webshop"),
+        shop_owner=os.getenv("SHOP_OWNER", ""),
+        shop_logo_url=os.getenv("SHOP_LOGO_URL", ""),
         session_secret=os.getenv(
             "ADMIN_SESSION_SECRET", "change-me-admin-session-secret"
         ),

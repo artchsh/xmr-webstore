@@ -1,24 +1,49 @@
 {% extends "base.html" %}
 {% block title %}{{ product.title }}{% endblock %}
 {% block content %}
-<article>
+<article class="product-layout">
+  <section class="product-gallery">
   {% set image_src = product_image_src(product.image_url, product.image_path) %}
-  {% if image_src %}
-    <p><img src="{{ image_src }}" alt="{{ product.title }}" class="product-image"></p>
+  {% set fallback_logo = false %}
+  {% if not image_src and shop_logo_src %}
+    {% set image_src = shop_logo_src %}
+    {% set fallback_logo = true %}
   {% endif %}
+  {% if image_src %}
+    <div class="product-detail-media {% if fallback_logo %}product-detail-media--fallback{% endif %}">
+      <img src="{{ image_src }}" alt="{{ product.title }}" class="product-detail-image {% if fallback_logo %}product-detail-image--fallback{% endif %}">
+    </div>
+  {% endif %}
+  </section>
+
+  <section class="product-main">
   <h1>{{ product.title }}</h1>
-  <p><strong>{{ format_xmr(product.price_atomic) }} XMR</strong></p>
   <p>{{ product.short_description }}</p>
   <div class="long-text">{{ product.long_description }}</div>
+  </section>
 
-  <form method="post" action="/cart/add">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="product_id" value="{{ product.id }}">
-    <label>
-      Quantity
-      <input type="number" name="quantity" min="1" value="1">
-    </label>
-    <button type="submit">Add to cart</button>
-  </form>
+  <aside class="product-buy-box">
+    <p class="buy-price"><strong>{{ format_xmr(product.price_atomic) }} XMR</strong></p>
+    <form method="post" action="/cart/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <label>
+        Quantity
+        <input type="number" name="quantity" min="1" value="1">
+      </label>
+      <button type="submit">Add to cart</button>
+    </form>
+  </aside>
 </article>
+
+{% if other_products %}
+  <section>
+    <h2>Other products</h2>
+    <div class="grid">
+      {% for product in other_products %}
+        {% include "partials/product_card.html" %}
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
 {% endblock %}

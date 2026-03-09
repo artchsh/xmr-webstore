@@ -108,6 +108,14 @@ MIGRATIONS: list[str] = [
     ALTER TABLE products ADD COLUMN image_url TEXT;
     ALTER TABLE products ADD COLUMN image_path TEXT;
     """,
+    """
+    CREATE TABLE IF NOT EXISTS shop_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        setting_key TEXT NOT NULL UNIQUE,
+        setting_value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+    """,
 ]
 
 
